@@ -1,0 +1,63 @@
+name: Playwright E2E
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playwright-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Web app and API E2E tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Restore and build web app and API
+        run: |
+          dotnet restore
+          dotnet build --no-restore
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Playwright's webServer configuration starts the ASP.NET Core host,
+      # waits for it at http://127.0.0.1:5114, and keeps both the MVC web app
+      # and its API endpoints available until the complete suite has finished.
+      - name: Run Playwright E2E tests
+        run: npm test
+
+      - name: Upload Playwright reports and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            playwright-report/
+            test-report/
+            test-results/

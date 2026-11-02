@@ -1,0 +1,19 @@
+{
+  "name": "eaemployee-playwright-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end test framework for EAEmployee",
+  "scripts": {
+    "test": "node e2e/scripts/run-tests.mjs",
+    "test:e2e": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report playwright-report",
+    "report:markdown": "node e2e/scripts/generate-report.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3"
+  }
+}

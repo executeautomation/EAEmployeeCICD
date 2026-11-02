@@ -1,0 +1,129 @@
+using EAEmployee.Net8.Data;
+using EAEmployee.Net8.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace EAEmployee.Net8.Controllers;
+
+public class EmployeeController : Controller
+{
+    private readonly ApplicationDbContext _db;
+
+    public EmployeeController(ApplicationDbContext db)
+    {
+        _db = db;
+    }
+
+    private const int PageSize = 5;
+
+    // GET: Employee
+    public async Task<IActionResult> Index(string? searchTerm, string? emailTerm, int? gradeFilter, int page = 1)
+    {
+        var employees = _db.Employees.AsQueryable();
+
+        if (!string.IsNullOrEmpty(searchTerm))
+            employees = employees.Where(e => e.Name.StartsWith(searchTerm));
+
+        if (!string.IsNullOrEmpty(emailTerm))
+            employees = employees.Where(e => e.Email.Contains(emailTerm));
+
+        if (gradeFilter.HasValue)
+            employees = employees.Where(e => e.Grade == gradeFilter.Value);
+
+        ViewBag.SearchTerm = searchTerm;
+        ViewBag.EmailTerm = emailTerm;
+        ViewBag.GradeFilter = gradeFilter;
+        var paginatedList = await PaginatedList<Employee>.CreateAsync(employees, page, PageSize);
+        return View(paginatedList);
+    }
+
+    // GET: Employee/Create
+    [Authorize(Roles = "Administrator")]
+    public IActionResult Create() => View();
+
+    // POST: Employee/Create
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> Create(Employee employee)
+    {
+        if (ModelState.IsValid)
+        {
+            var existing = await _db.Employees
+                .FirstOrDefaultAsync(e => e.Email == employee.Email);
+            if (existing != null)
+            {
+                return Json(new
+                {
+                    isDuplicate = true,
+                    employee = new
+                    {
+                        existing.Id,
+                        existing.Name,
+                        existing.Email,
+                        existing.Salary,
+                        existing.Age,
+                        existing.DurationWorked,
+                        existing.Grade
+                    }
+                });
+            }
+
+            _db.Employees.Add(employee);
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+        return View(employee);
+    }
+
+    // GET: Employee/Edit/5
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var employee = await _db.Employees.FindAsync(id);
+        if (employee == null) return NotFound();
+        return View(employee);
+    }
+
+    // POST: Employee/Edit/5
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> Edit(int id, Employee employee)
+    {
+        if (id != employee.Id) return NotFound();
+
+        if (ModelState.IsValid)
+        {
+            _db.Entry(employee).State = EntityState.Modified;
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+        return View(employee);
+    }
+
+    // GET: Employee/Delete/5
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var employee = await _db.Employees.FindAsync(id);
+        if (employee == null) return NotFound();
+        return View(employee);
+    }
+
+    // POST: Employee/Delete/5
+    [HttpPost, ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var employee = await _db.Employees.FindAsync(id);
+        if (employee != null)
+        {
+            _db.Employees.Remove(employee);
+            await _db.SaveChangesAsync();
+        }
+        return RedirectToAction(nameof(Index));
+    }
+}
