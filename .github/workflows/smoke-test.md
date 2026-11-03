@@ -3,9 +3,12 @@ name: Browser Smoke Test
 description: Three quick browser checks for EAEmployee.
 intent: Give maintainers a quick indication that the main public pages are usable.
 on:
-  workflow_dispatch:
+  issues:
+    types: [opened]
+if: startsWith(github.event.issue.title, '[smoke-test]')
 permissions:
   contents: read
+  issues: read
 engine:
   id: codex
   env:
@@ -36,21 +39,8 @@ models:
 
 # Publish one report; keep automatic diagnostic issues disabled.
 safe-outputs:
-  create-discussion:
-    title-prefix: "[smoke-test] "
-    category: q-a
-    max: 1
-    expires: false
-    fallback-to-issue: false
-  create-issue: false
-  activation-comments: false
-  report-failure-as-issue: false
-  report-failed-jobs: false
-  report-incomplete: {create-issue: false}
-  report-missing-tool: {create-issue: false}
-  report-missing-data: {create-issue: false}
-  threat-detection: {model: MiniMax-M3.1-Flash, report-as-issue: false}
-  noop: {report-as-issue: false}
+  add-comment:
+  threat-detection: {model: MiniMax-M3.1-Flash}
 
 # Build before the agent starts; no package installs during browser testing.
 steps:
@@ -95,7 +85,7 @@ If startup fails, skip the browser checks and mark them BLOCKED. Never guess a r
 
 Always run `playwright-cli close-all`, then stop your server with
 `kill "$(cat /tmp/gh-aw/smoke-test/server.pid)"` if its PID file exists.
-Use `create_discussion` to publish one short table: check, PASS/FAIL/BLOCKED,
+Use `add_comment` to post one short table on the triggering issue: check, PASS/FAIL/BLOCKED,
 and what you observed. Include any cleanup problem; never include credentials or raw logs.
 If reporting is unavailable, call `noop` with a brief reason.
 These are agent observations; the existing Playwright CI provides deterministic assertions.
