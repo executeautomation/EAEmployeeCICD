@@ -44,9 +44,6 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      # Playwright's webServer configuration starts the ASP.NET Core host,
-      # waits for it at http://127.0.0.1:5114, and keeps both the MVC web app
-      # and its API endpoints available until the complete suite has finished.
       - name: Run Playwright E2E tests
         run: npm test
 
